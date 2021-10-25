@@ -1,5 +1,11 @@
-header { margin-top: 40px; }
+@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
 
+header 
+{ 
+    margin-top: 40px;
+    font-family: 'Indie Flower', cursive; font-size: 30px;
+    font-weight: bold;
+}
 #menu-logo
 {
     display: block;
@@ -38,7 +44,7 @@ header { margin-top: 40px; }
 }
 
 .main-nav .menu li { width: 25%; height: 100px; }
-.main-nav .menu li a { margin-top: 25px; }
+.main-nav .menu li a { margin-top: 8px; }
 .main-nav .menu a
 {
     color: black;
@@ -49,4 +55,3 @@ header { margin-top: 40px; }
 }
 
 .main-nav .menu .flex-logo:hover { border-bottom: none!important; }
-.main-nav .menu .marge-left { margin-left: 640px;}
