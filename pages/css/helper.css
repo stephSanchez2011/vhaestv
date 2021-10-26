@@ -9,12 +9,20 @@
 input
 {
     display: block;
-    margin-top: 10px;
-    border: 2px solid;
+    margin: 10px;
+    border: 1.5px solid;
     border-radius: 5px;
+    background: #d3d3d3bf;
     padding: 5px;
 }
-input #keepsession
+input#keepsession
 {
+    margin-left: 0px!important;
+    transform: scale(1.5);
     display: inline!important;
+}
+
+input#validate:hover
+{
+   transform: scale(1.1);
 }

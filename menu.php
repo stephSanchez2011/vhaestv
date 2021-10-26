@@ -2,13 +2,15 @@
   /** Menu Name **/
   $menuOneName = "Accueil";
   $menuTwoName = "Twitch";
-  $menuThreeName = "Me contacter";
+  $menuThreeName = "Mon Compte";
+  $menuFourName = "Me connecter";
 
   /** Menu Link **/
   $menuLogo = "assets/img/logo.png";
-  $menuOneLink = "index.php";
+  $menuOneLink = "home.php";
   $menuTwoLink = "twitch.php";
-  $menuThreeLink = "home.php";
+  $menuThreeLink = "pageConnexion.php";
+  $menuFourLink = "pageConnexion.php";
 ?>
 
 <header>
@@ -17,7 +19,18 @@
           <li class="flex-logo"><img src="<?php echo($menuLogo) ?>" id="menu-logo"></li>
           <li><a href="<?php echo($menuOneLink) ?>"><?php echo($menuOneName) ?></a></li>
           <li><a href="<?php echo($menuTwoLink) ?>" ><?php echo($menuTwoName) ?></a></li>
-          <li><a href="<?php echo($menuThreeLink) ?>" ><?php echo($menuThreeName) ?></a></li>
+          <?php
+            if(isset($_COOKIE['LOGGED_USER']))
+            {
+              ?>
+              <li><a href="<?php echo($menuThreeLink) ?>" ><?php echo($menuThreeName) ?></a></li>
+              <?php
+            }else{ 
+              ?>
+              <li><a href="<?php echo($menuFourLink) ?>" ><?php echo($menuFourName) ?></a></li>
+              <?php
+            }
+          ?>
         </ul>
       </nav>
 </header>

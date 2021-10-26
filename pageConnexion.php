@@ -19,24 +19,31 @@ if (isset($_POST['forconnect']))
 
     if (!$resultat)
 	{
-	    echo 'Mauvais identifiant ou mot de passe !';
+	    $badConnect = 'Mauvais identifiant ou mot de passe !';
 	}
 	else
 	{
 		session_start();
 		$_SESSION['id'] = $resultat['id'];
 		$_SESSION['identifiant'] = $idconnect;
+		setcookie(
+			'LOGGED_USER',
+			$_SESSION['identifiant'],
+			[
+				'expires' => time() + 365*24*3600,
+				'secure' => true,
+				'httponly' => true,
+			]
+		);
 		echo 'Vous êtes connecté !';
 		header('Location: home.php');
         include("");
 	}
 }
 ?>
-<br>
+
 <body>
 	<?php 
-		include("menu.php");
 		include("connexion.php");
 	?>
-<br>
 </body>
