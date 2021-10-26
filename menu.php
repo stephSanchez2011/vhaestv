@@ -6,9 +6,9 @@
 
   /** Menu Link **/
   $menuLogo = "assets/img/logo.png";
-  $menuOneLink = "pages/home.php";
-  $menuTwoLink = "pages/home.php";
-  $menuThreeLink = "pages/home.php";
+  $menuOneLink = "index.php";
+  $menuTwoLink = "twitch.php";
+  $menuThreeLink = "home.php";
 ?>
 
 <header>

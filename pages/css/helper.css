@@ -1,0 +1,20 @@
+#validate
+{
+    border-radius: 10px;
+    font-weight: bold;
+    padding: 10px;
+    font-size: bold;
+    background-color: white;
+}
+input
+{
+    display: block;
+    margin-top: 10px;
+    border: 2px solid;
+    border-radius: 5px;
+    padding: 5px;
+}
+input #keepsession
+{
+    display: inline!important;
+}
