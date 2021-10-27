@@ -3,8 +3,8 @@
 <div id='form' align="center">
 	<h1>Connectez-vous</h1>
 	<form action="pageConnexion.php" method="POST">
-		<input type="text" id='id' placeholder="Identifiant.." id="identifiant" name="idconnect">
-		<input type="password" id='password' placeholder="Mot de passe.." id="password" name="passwordconnect">
+		<input type="text" id='id' placeholder="Identifiant.." name="idconnect">
+		<input type="password" id='password' placeholder="Mot de passe.." name="passwordconnect">
 		<input type="checkbox" id='keepsession' name="keepsession">Se souvenir de moi
 		<input type="submit" id='validate' name="forconnect" value="VALIDER">
 	</form>

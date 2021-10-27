@@ -16,6 +16,27 @@ if (isset($_POST['forconnect']))
 	    "password" => $passwordconnect));
 
 	$resultat = $req->fetch();
+	if(isset($_POST['keepsession'])){
+		header('Location: myAccount.php');
+		setcookie(
+			'loggin',
+			$_SESSION['identifiant'],
+			[
+				'expires' => time() + 365*24*3600,
+				'secure' => true,
+				'httponly' => true,
+			]
+		);
+		setcookie(
+			'password',
+			$_SESSION['password'],
+			[
+				'expires' => time() + 365*24*3600,
+				'secure' => true,
+				'httponly' => true,
+			]
+		);
+	}
 
     if (!$resultat)
 	{
@@ -26,18 +47,9 @@ if (isset($_POST['forconnect']))
 		session_start();
 		$_SESSION['id'] = $resultat['id'];
 		$_SESSION['identifiant'] = $idconnect;
-		setcookie(
-			'LOGGED_USER',
-			$_SESSION['identifiant'],
-			[
-				'expires' => time() + 365*24*3600,
-				'secure' => true,
-				'httponly' => true,
-			]
-		);
+		
 		echo 'Vous êtes connecté !';
 		header('Location: home.php');
-        include("");
 	}
 }
 ?>

@@ -2,10 +2,7 @@
 <html lang="fr">
     <?php include("head.php");  ?>
     <body>
-        <?php
-            include("menu.php");
-            include("main.php");
-        ?>
+        <?php include("menu.php");  ?>
     </body>
     <?php include("footer.php");  ?>
 </html>

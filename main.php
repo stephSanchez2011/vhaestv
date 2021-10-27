@@ -1,9 +1,10 @@
 <main>
   <?php
-    if(isset($_COOKIE['LOGGED_USER']))
+
+    if(isset($_SESSION['identifiant']))
     {
       ?>
-      <h1>Fais toi plaisir mon bro  <?php echo $_COOKIE['LOGGED_USER']; ?> !</h1>
+      <h1>Fais toi plaisir mon bro  <?php echo $_SESSION['identifiant']; ?> !</h1>
       <?php
     }else{
       ?>
