@@ -35,6 +35,12 @@ Stockage local : SQLite `data/sharemyreq.db` (via `@libsql/client`).
 | `/api/shares/[id]/inbox?token=...` | Inbox mock (capture HTTP) |
 | `/api/shares/[id]/capture` | Capture depuis snippet fetch |
 
+## Schéma V2 progression école
+
+Le schéma SQL exact (tables, clés, indexes, KPI) est documenté ici :
+
+- `docs/v2-progress-schema.md`
+
 ## Déploiement Vercel + Turso
 
 1. Crée une DB Turso (`turso db create sharemyreq`)
