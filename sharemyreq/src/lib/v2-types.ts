@@ -100,6 +100,25 @@ export type CohortDashboard = {
   };
 };
 
+export type ExerciseSlot = {
+  exercise: Exercise;
+  submission: Submission | null;
+  shareId: string | null;
+  renderLink: string;
+  editLink: string | null;
+};
+
+export type RenderContext = {
+  cohort: Cohort;
+  student: Student;
+  exercise: Exercise;
+  existingSubmission: {
+    shareId: string;
+    editLink: string;
+    shareLink: string;
+  } | null;
+};
+
 export type StudentProgress = {
   student: Student;
   cohort: Cohort;
@@ -110,10 +129,12 @@ export type StudentProgress = {
     versions: SubmissionVersionMetrics[];
     latestScoreRatio: number;
   }>;
+  exerciseSlots: ExerciseSlot[];
   stats: {
     totalSubmissions: number;
     validatedCount: number;
     avgScoreRatio: number;
     reworkRate: number;
+    pendingCount: number;
   };
 };

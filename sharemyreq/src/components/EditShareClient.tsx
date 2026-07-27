@@ -18,6 +18,8 @@ type CreatedInfo = {
   editToken: string;
   trainerUrl?: string;
   trainerToken?: string;
+  linked?: boolean;
+  dashboardUrl?: string | null;
 };
 
 export function EditShareClient({
@@ -217,9 +219,20 @@ export function EditShareClient({
           </div>
         </div>
         {createdInfo && (
-          <p className="text-sm text-[var(--accent-ink)]">
-            Partage créé. Envoie le lien formateur, garde ton lien d’édition.
-          </p>
+          <div className="space-y-2 text-sm text-[var(--accent-ink)]">
+            <p>
+              Partage créé. Envoie le lien formateur, garde ton lien d'édition.
+            </p>
+            {createdInfo.linked && createdInfo.dashboardUrl && (
+              <p>
+                Rendu lié à la promo — visible dans le{" "}
+                <Link href={createdInfo.dashboardUrl} className="underline">
+                  dashboard formateur
+                </Link>
+                .
+              </p>
+            )}
+          </div>
         )}
       </section>
 

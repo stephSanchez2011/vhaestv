@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
-import { addStudent } from "@/lib/v2-store";
+import { addStudent, listStudents } from "@/lib/v2-store";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, { params }: Params) {
+  const { id } = await params;
+  try {
+    const students = await listStudents(id);
+    return NextResponse.json({ students });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Impossible de lister les élèves." },
+      { status: 500 },
+    );
+  }
+}
 
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;

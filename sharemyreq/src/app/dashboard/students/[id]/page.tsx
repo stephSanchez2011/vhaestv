@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CopyButton } from "@/components/CopyButton";
+import { buildRenderLinkAbsolute } from "@/lib/magic-link";
 import type { StudentProgress } from "@/lib/v2-types";
 
 export default function StudentProgressPage() {
@@ -10,6 +12,11 @@ export default function StudentProgressPage() {
   const studentId = params.id;
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (!studentId) return;
@@ -49,47 +56,102 @@ export default function StudentProgressPage() {
         <p className="mt-2 text-[var(--muted)]">{progress.cohort.name}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="badge-info">
-            {progress.stats.validatedCount}/{progress.stats.totalSubmissions} validés
+            {progress.stats.validatedCount}/{progress.exerciseSlots.length} validés
           </span>
+          <span className="badge-warn">{progress.stats.pendingCount} à rendre</span>
           <span className="badge-ok">
             score moyen {Math.round(progress.stats.avgScoreRatio * 100)}%
           </span>
-          <span className="badge-warn">
-            rework {progress.stats.reworkRate}%
-          </span>
+          <span className="badge-warn">rework {progress.stats.reworkRate}%</span>
         </div>
       </header>
 
       <section className="panel space-y-4">
-        <h2 className="section-title">Rendus</h2>
-        {progress.submissions.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">Aucun rendu lié.</p>
+        <h2 className="section-title">Exercices</h2>
+        {progress.exerciseSlots.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">
+            Aucun exercice dans cette promo.
+          </p>
         ) : (
-          progress.submissions.map((item) => (
+          progress.exerciseSlots.map((slot) => {
+            const absoluteLink =
+              origin &&
+              buildRenderLinkAbsolute(
+                {
+                  cohortId: progress.cohort.id,
+                  studentId: progress.student.id,
+                  exerciseId: slot.exercise.id,
+                },
+                origin,
+              );
+
+            return (
+              <div
+                key={slot.exercise.id}
+                className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{slot.exercise.title}</p>
+                  <span
+                    className={
+                      slot.submission?.isValidated
+                        ? "badge-ok"
+                        : slot.submission
+                          ? "badge-warn"
+                          : "badge-info"
+                    }
+                  >
+                    {slot.submission?.isValidated
+                      ? "Validé"
+                      : slot.submission
+                        ? "En cours"
+                        : "À rendre"}
+                  </span>
+                </div>
+
+                {slot.submission ? (
+                  <>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {slot.submission.currentVersion} version(s)
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {slot.editLink && (
+                        <Link href={slot.editLink} className="btn-primary">
+                          Continuer le rendu
+                        </Link>
+                      )}
+                      {slot.shareId && (
+                        <Link href={`/s/${slot.shareId}`} className="btn-secondary">
+                          Voir le partage
+                        </Link>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link href={slot.renderLink} className="btn-primary">
+                      Rendre l'exercice
+                    </Link>
+                    {absoluteLink && (
+                      <CopyButton value={absoluteLink} label="Copier lien rendu" />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </section>
+
+      {progress.submissions.length > 0 && (
+        <section className="panel space-y-4">
+          <h2 className="section-title">Historique des versions</h2>
+          {progress.submissions.map((item) => (
             <div
               key={item.submission.id}
               className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-4"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold">{item.exercise.title}</p>
-                <span
-                  className={
-                    item.submission.isValidated ? "badge-ok" : "badge-warn"
-                  }
-                >
-                  {item.submission.isValidated ? "Validé" : "En cours"}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                {item.versions.length} version(s) · dernier score{" "}
-                {Math.round(item.latestScoreRatio * 100)}%
-              </p>
-              <Link
-                href={`/s/${item.shareId}`}
-                className="btn-secondary mt-3 inline-flex"
-              >
-                Ouvrir le rendu
-              </Link>
+              <p className="font-semibold">{item.exercise.title}</p>
               <ol className="mt-3 space-y-1 text-sm font-mono text-[var(--muted)]">
                 {item.versions.map((v) => (
                   <li key={v.id}>
@@ -100,9 +162,9 @@ export default function StudentProgressPage() {
                 ))}
               </ol>
             </div>
-          ))
-        )}
-      </section>
+          ))}
+        </section>
+      )}
 
       <Link
         href={`/dashboard/${progress.cohort.id}`}

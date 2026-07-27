@@ -46,18 +46,34 @@ Le schéma SQL exact (tables, clés, indexes, KPI) est documenté ici :
 | Route | Méthode | Rôle |
 |-------|---------|------|
 | `/api/v2/cohorts` | GET/POST | Lister / créer une promo |
-| `/api/v2/cohorts/[id]/students` | POST | Ajouter un élève |
-| `/api/v2/cohorts/[id]/exercises` | POST | Ajouter un exercice |
+| `/api/v2/cohorts/[id]/students` | GET/POST | Lister / ajouter un élève |
+| `/api/v2/cohorts/[id]/exercises` | GET/POST | Lister / ajouter un exercice |
 | `/api/v2/cohorts/[id]/dashboard` | GET | KPI + tableau promo |
 | `/api/v2/students/[id]/progress` | GET | Fiche progression élève |
+| `/api/v2/render-context` | GET | Contexte lien magique (?cohort&student&exercise) |
 | `/api/v2/submissions/link-share` | POST | Lier un share à élève/exercice |
 | `/api/v2/demo/seed` | POST | Promo démo + rendu lié |
+
+`POST /api/shares` accepte aussi `cohortId`, `studentId`, `exerciseId` pour lier à la création.
+
+### Lien magique de rendu (auto-liaison dashboard)
+
+Envoie à l'élève un lien du type :
+
+```
+/new?cohort=COHORT_ID&student=STUDENT_ID&exercise=EXERCISE_ID
+```
+
+À la création du share, il est **automatiquement lié** à l'élève et l'exercice dans le dashboard.
+
+- Si un rendu existe déjà → redirection vers le lien d'édition
+- Copie des liens depuis `/dashboard/[id]` (section « Liens de rendu »)
 
 ### UI Dashboard
 
 - `/dashboard` — liste promos
-- `/dashboard/[id]` — tableau élèves × exercices
-- `/dashboard/students/[id]` — fiche élève
+- `/dashboard/[id]` — gérer promo (élèves, exercices, liens rendu) + tableau progression
+- `/dashboard/students/[id]` — fiche élève + boutons rendre/continuer
 
 ## Déploiement Vercel + Turso
 

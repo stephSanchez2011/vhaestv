@@ -3,12 +3,15 @@ import { buildChecklist, emptyExpected } from "./checklist";
 import { ensureSchema, getDb } from "./db";
 import { getShare } from "./store";
 import type { ExpectedCriteria, ShareRecord } from "./types";
+import { buildRenderLink } from "./magic-link";
 import type {
   Cohort,
   CohortDashboard,
   DashboardExerciseCell,
   DashboardStudentRow,
   Exercise,
+  ExerciseSlot,
+  RenderContext,
   School,
   Student,
   StudentProgress,
@@ -402,7 +405,117 @@ export async function linkShareToSubmission(input: {
   return getSubmissionByShareId(input.shareId);
 }
 
-async function listStudents(cohortId: string): Promise<Student[]> {
+export async function getStudent(studentId: string): Promise<Student | null> {
+  await ensureSchema();
+  const result = await getDb().execute({
+    sql: `SELECT * FROM students WHERE id = ? LIMIT 1`,
+    args: [studentId],
+  });
+  const r = result.rows[0] as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return {
+    id: String(r.id),
+    cohortId: String(r.cohort_id),
+    displayName: String(r.display_name),
+    email: r.email ? String(r.email) : null,
+    externalRef: r.external_ref ? String(r.external_ref) : null,
+    status: String(r.status) as Student["status"],
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  };
+}
+
+export async function getExercise(exerciseId: string): Promise<Exercise | null> {
+  await ensureSchema();
+  const result = await getDb().execute({
+    sql: `SELECT * FROM exercises WHERE id = ? LIMIT 1`,
+    args: [exerciseId],
+  });
+  const r = result.rows[0] as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return {
+    id: String(r.id),
+    cohortId: String(r.cohort_id),
+    title: String(r.title),
+    slug: String(r.slug),
+    description: r.description ? String(r.description) : null,
+    expected: {
+      ...emptyExpected(),
+      ...(JSON.parse(String(r.expected_json)) as ExpectedCriteria),
+    },
+    isActive: Boolean(r.is_active),
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  };
+}
+
+export async function getSubmissionByStudentExercise(
+  studentId: string,
+  exerciseId: string,
+): Promise<Submission | null> {
+  await ensureSchema();
+  const result = await getDb().execute({
+    sql: `
+      SELECT * FROM submissions
+      WHERE student_id = ? AND exercise_id = ?
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `,
+    args: [studentId, exerciseId],
+  });
+  const r = result.rows[0] as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return {
+    id: String(r.id),
+    shareId: String(r.share_id),
+    cohortId: String(r.cohort_id),
+    studentId: String(r.student_id),
+    exerciseId: String(r.exercise_id),
+    currentVersion: Number(r.current_version),
+    isValidated: Boolean(r.is_validated),
+    validatedAt: r.validated_at ? String(r.validated_at) : null,
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at),
+  };
+}
+
+export async function getRenderContext(input: {
+  cohortId: string;
+  studentId: string;
+  exerciseId: string;
+}): Promise<RenderContext | null> {
+  const cohort = await getCohort(input.cohortId);
+  const student = await getStudent(input.studentId);
+  const exercise = await getExercise(input.exerciseId);
+  if (!cohort || !student || !exercise) return null;
+  if (student.cohortId !== cohort.id || exercise.cohortId !== cohort.id) return null;
+
+  const existing = await getSubmissionByStudentExercise(
+    input.studentId,
+    input.exerciseId,
+  );
+
+  let existingSubmission: RenderContext["existingSubmission"] = null;
+  if (existing) {
+    const share = await getShare(existing.shareId);
+    if (share) {
+      existingSubmission = {
+        shareId: existing.shareId,
+        editLink: `/e/${existing.shareId}?token=${share.editToken}`,
+        shareLink: `/s/${existing.shareId}`,
+      };
+    }
+  }
+
+  return {
+    cohort,
+    student,
+    exercise,
+    existingSubmission,
+  };
+}
+
+export async function listStudents(cohortId: string): Promise<Student[]> {
   const result = await getDb().execute({
     sql: `SELECT * FROM students WHERE cohort_id = ? ORDER BY display_name ASC`,
     args: [cohortId],
@@ -422,7 +535,7 @@ async function listStudents(cohortId: string): Promise<Student[]> {
   });
 }
 
-async function listExercises(cohortId: string): Promise<Exercise[]> {
+export async function listExercises(cohortId: string): Promise<Exercise[]> {
   const result = await getDb().execute({
     sql: `SELECT * FROM exercises WHERE cohort_id = ? AND is_active = 1 ORDER BY created_at ASC`,
     args: [cohortId],
@@ -693,16 +806,52 @@ export async function getStudentProgress(
   );
   const versionCount = submissions.reduce((sum, s) => sum + s.versions.length, 0);
 
+  const submissionByExercise = new Map(
+    submissions.map((s) => [s.exercise.id, s]),
+  );
+  const allExercises = await listExercises(student.cohortId);
+  const exerciseSlots: ExerciseSlot[] = [];
+
+  for (const exercise of allExercises) {
+    const linked = submissionByExercise.get(exercise.id);
+    const submission = linked?.submission ?? null;
+    const shareId = linked?.shareId ?? null;
+    let editLink: string | null = null;
+
+    if (shareId) {
+      const share = await getShare(shareId);
+      if (share) {
+        editLink = `/e/${shareId}?token=${share.editToken}`;
+      }
+    }
+
+    exerciseSlots.push({
+      exercise,
+      submission,
+      shareId,
+      renderLink: buildRenderLink({
+        cohortId: student.cohortId,
+        studentId: student.id,
+        exerciseId: exercise.id,
+      }),
+      editLink,
+    });
+  }
+
+  const pendingCount = exerciseSlots.filter((slot) => !slot.submission).length;
+
   return {
     student,
     cohort,
     submissions,
+    exerciseSlots,
     stats: {
       totalSubmissions: submissions.length,
       validatedCount,
       avgScoreRatio,
       reworkRate:
         versionCount === 0 ? 0 : Math.round((reworkCount / versionCount) * 1000) / 10,
+      pendingCount,
     },
   };
 }
