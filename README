@@ -1,2 +1,15 @@
-Site vitrine pour le Streamer twitch : Vhaes 
+Site vitrine pour le Streamer twitch : Vhaes
 ( Version débutant sans cms )
+
+---
+
+## ShareMyReq (nouveau)
+
+Prototype V1 dans `/sharemyreq` — partage de requêtes HTTP pour la formation
+(lien apprenant → vue formateur + versions après retex).
+
+```bash
+cd sharemyreq
+npm install
+npm run dev
+```

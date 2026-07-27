@@ -1,0 +1,67 @@
+export type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "OPTIONS"
+  | "HEAD";
+
+export type HeaderMap = Record<string, string>;
+
+export type RequestSnapshot = {
+  method: HttpMethod;
+  url: string;
+  status: number | null;
+  statusText: string;
+  durationMs: number | null;
+  requestHeaders: HeaderMap;
+  responseHeaders: HeaderMap;
+  requestBody: string;
+  responseBody: string;
+  note: string;
+};
+
+export type RequestVersion = {
+  id: string;
+  version: number;
+  createdAt: string;
+  afterFeedback: boolean;
+  snapshot: RequestSnapshot;
+};
+
+export type FeedbackItem = {
+  id: string;
+  createdAt: string;
+  authorLabel: string;
+  message: string;
+  targetVersion: number;
+};
+
+export type ShareRecord = {
+  id: string;
+  editToken: string;
+  title: string;
+  studentLabel: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  versions: RequestVersion[];
+  feedback: FeedbackItem[];
+};
+
+export type PublicShare = Omit<ShareRecord, "editToken">;
+
+export type ChecklistItem = {
+  id: string;
+  label: string;
+  status: "ok" | "warn" | "fail" | "info";
+  detail: string;
+};
+
+export type DiffChange = {
+  path: string;
+  before: string;
+  after: string;
+  kind: "added" | "removed" | "changed";
+};
