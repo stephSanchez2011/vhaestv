@@ -100,6 +100,16 @@ export type CohortDashboard = {
   };
 };
 
+export type ShareProgressContext = {
+  shareId: string;
+  submission: Submission;
+  student: Student;
+  exercise: Exercise;
+  cohort: Cohort;
+  studentUrl: string;
+  cohortUrl: string;
+};
+
 export type ExerciseSlot = {
   exercise: Exercise;
   submission: Submission | null;

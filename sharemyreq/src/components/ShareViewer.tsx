@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Checklist } from "@/components/Checklist";
 import { DiffView } from "@/components/DiffView";
 import { ExpectedPanel } from "@/components/ExpectedPanel";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { RequestView } from "@/components/RequestView";
+import { ShareProgressBanner } from "@/components/ShareProgressBanner";
 import { VersionTimeline } from "@/components/VersionTimeline";
 import { buildChecklist, checklistScore, diffVersions } from "@/lib/checklist";
 import type { PublicShare } from "@/lib/types";
+import type { ShareProgressContext } from "@/lib/v2-types";
 
 function storageKey(shareId: string) {
   return `sharemyreq:trainer:${shareId}`;
@@ -30,6 +33,16 @@ export function ShareViewer({
   const [unlocked, setUnlocked] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [progress, setProgress] = useState<ShareProgressContext | null>(null);
+
+  useEffect(() => {
+    void fetch(`/api/v2/shares/${share.id}/progress`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.linked && d.context) setProgress(d.context);
+      })
+      .catch(() => undefined);
+  }, [share.id]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem(storageKey(share.id));
@@ -84,6 +97,7 @@ export function ShareViewer({
   const checklist = buildChecklist(current.snapshot, share.expected);
   const score = checklistScore(checklist);
   const changes = diffVersions(previous, current);
+  const displayName = progress?.student.displayName || share.studentLabel;
 
   return (
     <div className="space-y-6 pt-4">
@@ -97,10 +111,31 @@ export function ShareViewer({
               {share.title}
             </h1>
             <p className="mt-2 text-[var(--muted)]">
-              {share.studentLabel} · {share.versions.length} version
+              {progress ? (
+                <Link
+                  href={progress.studentUrl}
+                  className="font-medium text-[var(--ink)] underline decoration-[var(--accent)] underline-offset-2 hover:text-[var(--accent-ink)]"
+                >
+                  {displayName}
+                </Link>
+              ) : (
+                displayName
+              )}{" "}
+              · {share.versions.length} version
               {share.versions.length > 1 ? "s" : ""} · expire le{" "}
               {new Date(share.expiresAt).toLocaleString("fr-FR")}
             </p>
+            {progress && (
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {progress.exercise.title} ·{" "}
+                <Link
+                  href={progress.cohortUrl}
+                  className="underline underline-offset-2"
+                >
+                  {progress.cohort.name}
+                </Link>
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <span
@@ -117,16 +152,21 @@ export function ShareViewer({
             {current.afterFeedback && (
               <span className="badge-rework">Retravaillé après retex</span>
             )}
+            {progress?.submission.isValidated && (
+              <span className="badge-ok">Validé promo</span>
+            )}
           </div>
         </div>
       </header>
+
+      {progress && <ShareProgressBanner context={progress} />}
 
       {!unlocked && (
         <section className="panel space-y-3">
           <h2 className="section-title">Déverrouiller le mode formateur</h2>
           <p className="section-sub">
             Sans token, cette page est en lecture seule. Utilise le lien
-            formateur fourni par l’apprenant (`?t=...`).
+            formateur fourni par l'apprenant (`?t=...`).
           </p>
           <div className="flex flex-wrap gap-2">
             <input

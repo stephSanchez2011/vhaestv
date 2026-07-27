@@ -7,10 +7,12 @@ import { CaptureSnippet } from "@/components/CaptureSnippet";
 import { Checklist } from "@/components/Checklist";
 import { ExpectedSummary } from "@/components/ExpectedSummary";
 import { RequestForm } from "@/components/RequestForm";
+import { ShareProgressBanner } from "@/components/ShareProgressBanner";
 import { buildChecklist } from "@/lib/checklist";
 import type { RequestFormValues } from "@/lib/form";
 import { formFromSnapshot, snapshotFromForm } from "@/lib/form";
 import type { PublicShare } from "@/lib/types";
+import type { ShareProgressContext } from "@/lib/v2-types";
 
 type CreatedInfo = {
   shareUrl: string;
@@ -46,6 +48,16 @@ export function EditShareClient({
   const [error, setError] = useState<string | null>(null);
   const [createdInfo, setCreatedInfo] = useState<CreatedInfo | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ShareProgressContext | null>(null);
+
+  useEffect(() => {
+    void fetch(`/api/v2/shares/${shareId}/progress`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.linked && d.context) setProgress(d.context);
+      })
+      .catch(() => undefined);
+  }, [shareId]);
 
   useEffect(() => {
     if (!created) return;
@@ -167,10 +179,27 @@ export function EditShareClient({
           {share.title}
         </h1>
         <p className="mt-2 text-[var(--muted)]">
-          Version courante : v{share.versions.length}. Même lien formateur, nouvel
-          historique à chaque mise à jour.
+          {progress ? (
+            <>
+              <Link
+                href={progress.studentUrl}
+                className="font-medium text-[var(--ink)] underline decoration-[var(--accent)] underline-offset-2"
+              >
+                {progress.student.displayName}
+              </Link>
+              {" · "}
+              {progress.exercise.title}
+              {" · "}
+            </>
+          ) : (
+            <>{share.studentLabel} · </>
+          )}
+          Version courante : v{share.versions.length}. Même lien formateur,
+          nouvel historique à chaque mise à jour.
         </p>
       </div>
+
+      {progress && <ShareProgressBanner context={progress} />}
 
       <section className="panel space-y-3">
         <h2 className="section-title">Tes liens</h2>

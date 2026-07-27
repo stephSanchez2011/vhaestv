@@ -52,6 +52,7 @@ Le schéma SQL exact (tables, clés, indexes, KPI) est documenté ici :
 | `/api/v2/students/[id]/progress` | GET | Fiche progression élève |
 | `/api/v2/render-context` | GET | Contexte lien magique (?cohort&student&exercise) |
 | `/api/v2/submissions/link-share` | POST | Lier un share à élève/exercice |
+| `/api/v2/shares/[id]/progress` | GET | Contexte promo lié à un share |
 | `/api/v2/demo/seed` | POST | Promo démo + rendu lié |
 
 `POST /api/shares` accepte aussi `cohortId`, `studentId`, `exerciseId` pour lier à la création.

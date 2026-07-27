@@ -13,6 +13,7 @@ import type {
   ExerciseSlot,
   RenderContext,
   School,
+  ShareProgressContext,
   Student,
   StudentProgress,
   Submission,
@@ -242,7 +243,9 @@ export async function addExercise(input: {
   };
 }
 
-async function getSubmissionByShareId(shareId: string): Promise<Submission | null> {
+export async function getSubmissionByShareId(
+  shareId: string,
+): Promise<Submission | null> {
   await ensureSchema();
   const result = await getDb().execute({
     sql: `SELECT * FROM submissions WHERE share_id = ? LIMIT 1`,
@@ -403,6 +406,30 @@ export async function linkShareToSubmission(input: {
 
   await syncSubmissionFromShare(input.shareId);
   return getSubmissionByShareId(input.shareId);
+}
+
+export async function getShareProgressContext(
+  shareId: string,
+): Promise<ShareProgressContext | null> {
+  const submission = await getSubmissionByShareId(shareId);
+  if (!submission) return null;
+
+  const [student, exercise, cohort] = await Promise.all([
+    getStudent(submission.studentId),
+    getExercise(submission.exerciseId),
+    getCohort(submission.cohortId),
+  ]);
+  if (!student || !exercise || !cohort) return null;
+
+  return {
+    shareId,
+    submission,
+    student,
+    exercise,
+    cohort,
+    studentUrl: `/dashboard/students/${student.id}`,
+    cohortUrl: `/dashboard/${cohort.id}`,
+  };
 }
 
 export async function getStudent(studentId: string): Promise<Student | null> {

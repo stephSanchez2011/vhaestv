@@ -36,6 +36,10 @@ export default function CohortDashboardPage() {
   const [exerciseMethod, setExerciseMethod] = useState("POST");
   const [exercisePath, setExercisePath] = useState("/login");
   const [exerciseStatus, setExerciseStatus] = useState("200");
+  const [linkShareUrl, setLinkShareUrl] = useState("");
+  const [linkStudentId, setLinkStudentId] = useState("");
+  const [linkExerciseId, setLinkExerciseId] = useState("");
+  const [linkMessage, setLinkMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!cohortId) return;
@@ -116,6 +120,41 @@ export default function CohortDashboardPage() {
         return;
       }
       setExerciseTitle("");
+      await load();
+    } catch {
+      setError("Erreur réseau");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function linkExistingShare() {
+    if (!cohortId || !linkShareUrl.trim() || !linkStudentId || !linkExerciseId) {
+      return;
+    }
+    setPending(true);
+    setError(null);
+    setLinkMessage(null);
+    try {
+      const match = linkShareUrl.match(/\/s\/([A-Za-z0-9_-]+)/);
+      const shareId = match?.[1] || linkShareUrl.trim();
+      const res = await fetch("/api/v2/submissions/link-share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shareId,
+          cohortId,
+          studentId: linkStudentId,
+          exerciseId: linkExerciseId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Liaison impossible");
+        return;
+      }
+      setLinkShareUrl("");
+      setLinkMessage("Rendu lié à l'élève — visible dans le tableau.");
       await load();
     } catch {
       setError("Erreur réseau");
@@ -276,6 +315,65 @@ export default function CohortDashboardPage() {
           )}
         </section>
       </div>
+
+      {students.length > 0 && exercises.length > 0 && (
+        <section className="panel space-y-3">
+          <h2 className="section-title">Lier un rendu existant</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Si l'élève a créé un partage libre (`/new`) avec son nom, colle le
+            lien `/s/...` ici pour le rattacher à un élève et un exercice de la
+            promo.
+          </p>
+          <input
+            className="field font-mono"
+            placeholder="https://…/s/abc123 ou abc123"
+            value={linkShareUrl}
+            onChange={(e) => setLinkShareUrl(e.target.value)}
+          />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              className="field"
+              value={linkStudentId}
+              onChange={(e) => setLinkStudentId(e.target.value)}
+            >
+              <option value="">Élève…</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.displayName}
+                </option>
+              ))}
+            </select>
+            <select
+              className="field"
+              value={linkExerciseId}
+              onChange={(e) => setLinkExerciseId(e.target.value)}
+            >
+              <option value="">Exercice…</option>
+              {exercises.map((ex) => (
+                <option key={ex.id} value={ex.id}>
+                  {ex.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={
+              pending ||
+              !linkShareUrl.trim() ||
+              !linkStudentId ||
+              !linkExerciseId
+            }
+            onClick={linkExistingShare}
+          >
+            Rattacher au dashboard
+          </button>
+          {linkMessage && (
+            <p className="text-sm text-[var(--accent-ink)]">{linkMessage}</p>
+          )}
+        </section>
+      )}
 
       {students.length > 0 && exercises.length > 0 && (
         <section className="panel space-y-3">
