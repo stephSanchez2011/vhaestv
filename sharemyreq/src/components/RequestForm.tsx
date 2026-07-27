@@ -1,6 +1,7 @@
 "use client";
 
 import type { RequestFormValues } from "@/lib/form";
+import { ImportPaste } from "@/components/ImportPaste";
 
 const METHODS = [
   "GET",
@@ -17,6 +18,7 @@ type Props = {
   onChange: (values: RequestFormValues) => void;
   showMeta?: boolean;
   showAfterFeedback?: boolean;
+  showImport?: boolean;
   submitLabel: string;
   onSubmit: () => void;
   pending?: boolean;
@@ -28,6 +30,7 @@ export function RequestForm({
   onChange,
   showMeta = false,
   showAfterFeedback = false,
+  showImport = true,
   submitLabel,
   onSubmit,
   pending = false,
@@ -48,6 +51,8 @@ export function RequestForm({
         onSubmit();
       }}
     >
+      {showImport && <ImportPaste values={values} onChange={onChange} />}
+
       {showMeta && (
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-2">

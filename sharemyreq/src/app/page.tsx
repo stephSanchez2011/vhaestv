@@ -59,7 +59,8 @@ status: 200 OK`}
             <div>
               <p className="font-semibold">L’apprenant capture sa requête</p>
               <p className="text-[var(--muted)]">
-                Méthode, URL, headers, body, status — même sans backend prêt.
+                Colle un curl / HAR depuis DevTools, ou saisit méthode, URL,
+                headers, body, status — même sans backend prêt.
               </p>
             </div>
           </div>

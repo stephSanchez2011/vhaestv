@@ -34,6 +34,15 @@ Fichier JSON local : `data/shares.json` (gitignored).
 
 TTL par défaut : **72 heures**.
 
+## Import rapide
+
+Sur `/new` et `/e/...`, colle :
+
+- une commande **Copy as cURL** (Chrome/Firefox DevTools)
+- ou un export **HAR** (JSON)
+
+→ le formulaire se préremplit (méthode, URL, headers, body, et status si HAR).
+
 ## Hors scope V1
 
 - Auth comptes
