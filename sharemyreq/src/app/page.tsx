@@ -69,7 +69,8 @@ status: 200 OK`}
             <div>
               <p className="font-semibold">Il envoie le lien formateur</p>
               <p className="text-[var(--muted)]">
-                Tu ouvres `/s/...` et tu as la checklist en un coup d’œil.
+                Tu ouvres `/s/...?t=...` (token formateur) : checklist, critères,
+                retex — sans partage d’écran.
               </p>
             </div>
           </div>

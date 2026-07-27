@@ -1,60 +1,122 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { nanoid } from "nanoid";
+import { emptyExpected } from "./checklist";
+import { ensureSchema, getDb } from "./db";
 import type {
   ExpectedCriteria,
   FeedbackItem,
   PublicShare,
   RequestSnapshot,
+  RequestVersion,
   ShareRecord,
 } from "./types";
-import { emptyExpected } from "./checklist";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "shares.json");
 const DEFAULT_TTL_HOURS = 72;
 
-type DbShape = {
-  shares: ShareRecord[];
+type ShareRow = {
+  id: string;
+  edit_token: string;
+  trainer_token: string;
+  title: string;
+  student_label: string;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+  expected_json: string;
+  versions_json: string;
+  feedback_json: string;
 };
-
-function normalizeShare(share: ShareRecord): ShareRecord {
-  return {
-    ...share,
-    expected: share.expected ?? emptyExpected(),
-  };
-}
-
-async function ensureDb(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(DB_FILE);
-  } catch {
-    const initial: DbShape = { shares: [] };
-    await fs.writeFile(DB_FILE, JSON.stringify(initial, null, 2), "utf8");
-  }
-}
-
-async function readDb(): Promise<DbShape> {
-  await ensureDb();
-  const raw = await fs.readFile(DB_FILE, "utf8");
-  const db = JSON.parse(raw) as DbShape;
-  db.shares = (db.shares || []).map((share) => normalizeShare(share));
-  return db;
-}
-
-async function writeDb(db: DbShape): Promise<void> {
-  await ensureDb();
-  await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf8");
-}
 
 function isExpired(share: ShareRecord): boolean {
   return new Date(share.expiresAt).getTime() < Date.now();
 }
 
+function rowToShare(row: ShareRow): ShareRecord {
+  return {
+    id: row.id,
+    editToken: row.edit_token,
+    trainerToken: row.trainer_token,
+    title: row.title,
+    studentLabel: row.student_label,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    expiresAt: row.expires_at,
+    expected: {
+      ...emptyExpected(),
+      ...(JSON.parse(row.expected_json) as ExpectedCriteria),
+    },
+    versions: JSON.parse(row.versions_json) as RequestVersion[],
+    feedback: JSON.parse(row.feedback_json) as FeedbackItem[],
+  };
+}
+
+async function saveShare(share: ShareRecord): Promise<void> {
+  await ensureSchema();
+  const db = getDb();
+  await db.execute({
+    sql: `
+      INSERT INTO shares (
+        id, edit_token, trainer_token, title, student_label,
+        created_at, updated_at, expires_at, expected_json, versions_json, feedback_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        edit_token = excluded.edit_token,
+        trainer_token = excluded.trainer_token,
+        title = excluded.title,
+        student_label = excluded.student_label,
+        created_at = excluded.created_at,
+        updated_at = excluded.updated_at,
+        expires_at = excluded.expires_at,
+        expected_json = excluded.expected_json,
+        versions_json = excluded.versions_json,
+        feedback_json = excluded.feedback_json
+    `,
+    args: [
+      share.id,
+      share.editToken,
+      share.trainerToken,
+      share.title,
+      share.studentLabel,
+      share.createdAt,
+      share.updatedAt,
+      share.expiresAt,
+      JSON.stringify(share.expected),
+      JSON.stringify(share.versions),
+      JSON.stringify(share.feedback),
+    ],
+  });
+}
+
+async function loadShare(id: string): Promise<ShareRecord | null> {
+  await ensureSchema();
+  const db = getDb();
+  const result = await db.execute({
+    sql: `SELECT * FROM shares WHERE id = ? LIMIT 1`,
+    args: [id],
+  });
+  const row = result.rows[0] as unknown as ShareRow | undefined;
+  if (!row) return null;
+  const share = rowToShare(row);
+  if (isExpired(share)) return null;
+  return share;
+}
+
 export function toPublicShare(share: ShareRecord): PublicShare {
-  const { editToken: _editToken, ...rest } = share;
+  const { editToken: _e, trainerToken: _t, ...rest } = share;
   return rest;
+}
+
+export function assertTrainerAccess(
+  share: ShareRecord,
+  trainerToken?: string | null,
+): boolean {
+  return Boolean(trainerToken && trainerToken === share.trainerToken);
+}
+
+export function assertEditorAccess(
+  share: ShareRecord,
+  editToken?: string | null,
+): boolean {
+  return Boolean(editToken && editToken === share.editToken);
 }
 
 export async function createShare(input: {
@@ -63,16 +125,17 @@ export async function createShare(input: {
   snapshot: RequestSnapshot;
   ttlHours?: number;
   expected?: ExpectedCriteria;
-}): Promise<{ share: ShareRecord; editToken: string }> {
-  const db = await readDb();
+}): Promise<{ share: ShareRecord; editToken: string; trainerToken: string }> {
   const now = new Date();
   const ttl = input.ttlHours ?? DEFAULT_TTL_HOURS;
   const id = nanoid(10);
   const editToken = nanoid(24);
+  const trainerToken = nanoid(24);
 
   const share: ShareRecord = {
     id,
     editToken,
+    trainerToken,
     title: input.title.trim() || "Requête API",
     studentLabel: input.studentLabel.trim() || "Apprenant",
     createdAt: now.toISOString(),
@@ -91,17 +154,12 @@ export async function createShare(input: {
     feedback: [],
   };
 
-  db.shares.unshift(share);
-  await writeDb(db);
-  return { share, editToken };
+  await saveShare(share);
+  return { share, editToken, trainerToken };
 }
 
 export async function getShare(id: string): Promise<ShareRecord | null> {
-  const db = await readDb();
-  const share = db.shares.find((item) => item.id === id);
-  if (!share) return null;
-  if (isExpired(share)) return null;
-  return share;
+  return loadShare(id);
 }
 
 export async function addVersion(
@@ -110,10 +168,8 @@ export async function addVersion(
   snapshot: RequestSnapshot,
   options?: { afterFeedback?: boolean; note?: string },
 ): Promise<ShareRecord | null> {
-  const db = await readDb();
-  const share = db.shares.find((item) => item.id === id);
-  if (!share || isExpired(share)) return null;
-  if (share.editToken !== editToken) return null;
+  const share = await loadShare(id);
+  if (!share || !assertEditorAccess(share, editToken)) return null;
 
   const now = new Date().toISOString();
   const nextVersion = share.versions.length + 1;
@@ -123,26 +179,24 @@ export async function addVersion(
     id: nanoid(8),
     version: nextVersion,
     createdAt: now,
-    afterFeedback:
-      options?.afterFeedback ?? previousFeedbackCount > 0,
+    afterFeedback: options?.afterFeedback ?? previousFeedbackCount > 0,
     snapshot: {
       ...snapshot,
       note: options?.note?.trim() || snapshot.note,
     },
   });
   share.updatedAt = now;
-
-  await writeDb(db);
+  await saveShare(share);
   return share;
 }
 
 export async function addFeedback(
   id: string,
   input: { message: string; authorLabel?: string },
+  trainerToken: string,
 ): Promise<ShareRecord | null> {
-  const db = await readDb();
-  const share = db.shares.find((item) => item.id === id);
-  if (!share || isExpired(share)) return null;
+  const share = await loadShare(id);
+  if (!share || !assertTrainerAccess(share, trainerToken)) return null;
 
   const message = input.message.trim();
   if (!message) return null;
@@ -158,17 +212,17 @@ export async function addFeedback(
 
   share.feedback.push(item);
   share.updatedAt = new Date().toISOString();
-  await writeDb(db);
+  await saveShare(share);
   return share;
 }
 
 export async function updateExpected(
   id: string,
   expected: ExpectedCriteria,
+  trainerToken: string,
 ): Promise<ShareRecord | null> {
-  const db = await readDb();
-  const share = db.shares.find((item) => item.id === id);
-  if (!share || isExpired(share)) return null;
+  const share = await loadShare(id);
+  if (!share || !assertTrainerAccess(share, trainerToken)) return null;
 
   share.expected = {
     method: expected.method || "",
@@ -184,7 +238,7 @@ export async function updateExpected(
     requireJsonBody: Boolean(expected.requireJsonBody),
   };
   share.updatedAt = new Date().toISOString();
-  await writeDb(db);
+  await saveShare(share);
   return share;
 }
 

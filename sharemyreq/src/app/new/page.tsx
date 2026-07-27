@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RequestForm } from "@/components/RequestForm";
 import type { RequestFormValues } from "@/lib/form";
-import { snapshotFromForm } from "@/lib/form";
+import { formFromSnapshot, snapshotFromForm } from "@/lib/form";
+import { EXERCISE_TEMPLATES } from "@/lib/templates";
 
-const initialValues: RequestFormValues = {
+const blankValues: RequestFormValues = {
   title: "POST /login",
   studentLabel: "",
   method: "POST",
@@ -25,9 +26,27 @@ const initialValues: RequestFormValues = {
 
 export default function NewSharePage() {
   const router = useRouter();
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState(blankValues);
+  const [selectedTemplate, setSelectedTemplate] = useState("login-post");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const template = useMemo(
+    () => EXERCISE_TEMPLATES.find((item) => item.id === selectedTemplate),
+    [selectedTemplate],
+  );
+
+  function applyTemplate(id: string) {
+    setSelectedTemplate(id);
+    const next = EXERCISE_TEMPLATES.find((item) => item.id === id);
+    if (!next) return;
+    setValues(
+      formFromSnapshot(next.snapshot, {
+        title: next.title,
+        studentLabel: values.studentLabel,
+      }),
+    );
+  }
 
   async function submit() {
     setPending(true);
@@ -40,6 +59,7 @@ export default function NewSharePage() {
           title: values.title,
           studentLabel: values.studentLabel,
           snapshot: snapshotFromForm(values),
+          expected: template?.expected,
         }),
       });
       const data = await res.json();
@@ -54,6 +74,8 @@ export default function NewSharePage() {
           shareUrl: data.shareUrl,
           editUrl: data.editUrl,
           editToken: data.editToken,
+          trainerUrl: data.trainerUrl,
+          trainerToken: data.trainerToken,
         }),
       );
       router.push(`/e/${data.id}?token=${data.editToken}&created=1`);
@@ -74,10 +96,33 @@ export default function NewSharePage() {
           Créer un partage de requête
         </h1>
         <p className="mt-2 max-w-2xl text-[var(--muted)]">
-          Remplis ce que ton front envoie vraiment. Tu obtiendras un lien
-          formateur (lecture) et un lien perso pour mettre à jour après retex.
+          Choisis un template d’exercice ou colle un curl/HAR. Tu obtiendras un
+          lien lecture, un lien formateur, et ton lien d’édition.
         </p>
       </div>
+
+      <section className="panel">
+        <h2 className="section-title mb-3">Templates d’exercice</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {EXERCISE_TEMPLATES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => applyTemplate(item.id)}
+              className={`rounded-xl border px-3 py-3 text-left transition ${
+                selectedTemplate === item.id
+                  ? "border-[var(--accent)] bg-[var(--accent-soft)]"
+                  : "border-[var(--line)] bg-[var(--panel-2)] hover:border-[var(--accent)]"
+              }`}
+            >
+              <p className="font-semibold">{item.label}</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {item.description}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="panel">
         <RequestForm

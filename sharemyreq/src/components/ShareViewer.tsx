@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Checklist } from "@/components/Checklist";
 import { DiffView } from "@/components/DiffView";
 import { ExpectedPanel } from "@/components/ExpectedPanel";
@@ -10,11 +10,62 @@ import { VersionTimeline } from "@/components/VersionTimeline";
 import { buildChecklist, checklistScore, diffVersions } from "@/lib/checklist";
 import type { PublicShare } from "@/lib/types";
 
-export function ShareViewer({ initialShare }: { initialShare: PublicShare }) {
+function storageKey(shareId: string) {
+  return `sharemyreq:trainer:${shareId}`;
+}
+
+export function ShareViewer({
+  initialShare,
+  initialTrainerToken = "",
+}: {
+  initialShare: PublicShare;
+  initialTrainerToken?: string;
+}) {
   const [share, setShare] = useState(initialShare);
   const [selectedVersion, setSelectedVersion] = useState(
     initialShare.versions[initialShare.versions.length - 1]?.version ?? 1,
   );
+  const [trainerToken, setTrainerToken] = useState(initialTrainerToken);
+  const [tokenInput, setTokenInput] = useState(initialTrainerToken);
+  const [unlocked, setUnlocked] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(storageKey(share.id));
+    const candidate = initialTrainerToken || saved || "";
+    if (!candidate) return;
+    setTrainerToken(candidate);
+    setTokenInput(candidate);
+    void unlock(candidate, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [share.id, initialTrainerToken]);
+
+  async function unlock(token = tokenInput, persist = true) {
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const res = await fetch(`/api/shares/${share.id}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trainerToken: token }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setUnlocked(false);
+        setUnlockError(data.error || "Token invalide");
+        return;
+      }
+      setTrainerToken(token);
+      setUnlocked(true);
+      if (persist) sessionStorage.setItem(storageKey(share.id), token);
+    } catch {
+      setUnlockError("Impossible de vérifier le token.");
+      setUnlocked(false);
+    } finally {
+      setUnlocking(false);
+    }
+  }
 
   const current = useMemo(
     () => share.versions.find((v) => v.version === selectedVersion),
@@ -40,7 +91,7 @@ export function ShareViewer({ initialShare }: { initialShare: PublicShare }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--accent-ink)]">
-              Vue formateur
+              Vue formateur {unlocked ? "· mode édition" : "· lecture seule"}
             </p>
             <h1 className="mt-2 font-[family-name:var(--font-brand)] text-3xl tracking-tight">
               {share.title}
@@ -70,6 +121,33 @@ export function ShareViewer({ initialShare }: { initialShare: PublicShare }) {
         </div>
       </header>
 
+      {!unlocked && (
+        <section className="panel space-y-3">
+          <h2 className="section-title">Déverrouiller le mode formateur</h2>
+          <p className="section-sub">
+            Sans token, cette page est en lecture seule. Utilise le lien
+            formateur fourni par l’apprenant (`?t=...`).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="field max-w-md font-mono"
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              placeholder="Token formateur"
+            />
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={unlocking || !tokenInput.trim()}
+              onClick={() => unlock()}
+            >
+              {unlocking ? "Vérification…" : "Déverrouiller"}
+            </button>
+          </div>
+          {unlockError && <p className="text-sm text-red-700">{unlockError}</p>}
+        </section>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-6">
           <VersionTimeline
@@ -77,21 +155,50 @@ export function ShareViewer({ initialShare }: { initialShare: PublicShare }) {
             selectedVersion={selectedVersion}
             onSelect={setSelectedVersion}
           />
-          <ExpectedPanel
-            shareId={share.id}
-            expected={share.expected}
-            onUpdated={setShare}
-          />
-          <FeedbackPanel
-            shareId={share.id}
-            feedback={share.feedback}
-            onUpdated={(next) => {
-              setShare(next);
-              setSelectedVersion(
-                next.versions[next.versions.length - 1]?.version ?? 1,
-              );
-            }}
-          />
+          {unlocked ? (
+            <>
+              <ExpectedPanel
+                shareId={share.id}
+                expected={share.expected}
+                trainerToken={trainerToken}
+                onUpdated={setShare}
+              />
+              <FeedbackPanel
+                shareId={share.id}
+                feedback={share.feedback}
+                trainerToken={trainerToken}
+                onUpdated={(next) => {
+                  setShare(next);
+                  setSelectedVersion(
+                    next.versions[next.versions.length - 1]?.version ?? 1,
+                  );
+                }}
+              />
+            </>
+          ) : (
+            <section className="panel">
+              <h2 className="section-title">Retex</h2>
+              {share.feedback.length === 0 ? (
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  Aucun retour pour l’instant.
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {[...share.feedback].reverse().map((item) => (
+                    <li
+                      key={item.id}
+                      className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3"
+                    >
+                      <p className="text-sm text-[var(--muted)]">
+                        {item.authorLabel} · v{item.targetVersion}
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap">{item.message}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
         </div>
         <div className="space-y-6">
           <Checklist items={checklist} />

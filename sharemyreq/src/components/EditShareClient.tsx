@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { CaptureSnippet } from "@/components/CaptureSnippet";
 import { Checklist } from "@/components/Checklist";
 import { ExpectedSummary } from "@/components/ExpectedSummary";
 import { RequestForm } from "@/components/RequestForm";
@@ -15,6 +16,8 @@ type CreatedInfo = {
   shareUrl: string;
   editUrl: string;
   editToken: string;
+  trainerUrl?: string;
+  trainerToken?: string;
 };
 
 export function EditShareClient({
@@ -29,6 +32,7 @@ export function EditShareClient({
   const created = searchParams.get("created") === "1";
 
   const [share, setShare] = useState(initialShare);
+  const [trainerUrl, setTrainerUrl] = useState("");
   const [values, setValues] = useState<RequestFormValues>(() => {
     const latest = initialShare.versions[initialShare.versions.length - 1];
     return formFromSnapshot(latest.snapshot, {
@@ -46,11 +50,36 @@ export function EditShareClient({
     const raw = sessionStorage.getItem(`sharemyreq:created:${shareId}`);
     if (!raw) return;
     try {
-      setCreatedInfo(JSON.parse(raw) as CreatedInfo);
+      const parsed = JSON.parse(raw) as CreatedInfo;
+      setCreatedInfo(parsed);
+      if (parsed.trainerUrl) setTrainerUrl(parsed.trainerUrl);
     } catch {
       // ignore
     }
   }, [created, shareId]);
+
+  useEffect(() => {
+    if (!token) return;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/shares/${shareId}?editToken=${encodeURIComponent(token)}`,
+        );
+        const data = await res.json();
+        if (!res.ok) return;
+        setShare(data.share);
+        if (data.trainerUrl) {
+          const absolute =
+            typeof window !== "undefined"
+              ? `${window.location.origin}${data.trainerUrl}`
+              : data.trainerUrl;
+          setTrainerUrl(absolute);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, [shareId, token]);
 
   const latestFeedback = useMemo(
     () => [...share.feedback].reverse()[0],
@@ -145,7 +174,7 @@ export function EditShareClient({
         <h2 className="section-title">Tes liens</h2>
         <div className="grid gap-3">
           <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3">
-            <p className="text-sm font-semibold">Lien formateur (lecture)</p>
+            <p className="text-sm font-semibold">Lien lecture (public)</p>
             <p className="mt-1 break-all font-mono text-sm">{shareUrl}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -160,6 +189,21 @@ export function EditShareClient({
               </Link>
             </div>
           </div>
+          {trainerUrl && (
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3">
+              <p className="text-sm font-semibold">
+                Lien formateur (retex + critères)
+              </p>
+              <p className="mt-1 break-all font-mono text-sm">{trainerUrl}</p>
+              <button
+                type="button"
+                className="btn-secondary mt-3"
+                onClick={() => copy("trainer", trainerUrl)}
+              >
+                {copied === "trainer" ? "Copié" : "Copier"}
+              </button>
+            </div>
+          )}
           <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3">
             <p className="text-sm font-semibold">Ton lien d’édition (privé)</p>
             <p className="mt-1 break-all font-mono text-sm">{editUrl}</p>
@@ -174,12 +218,12 @@ export function EditShareClient({
         </div>
         {createdInfo && (
           <p className="text-sm text-[var(--accent-ink)]">
-            Partage créé. Envoie le lien formateur, garde précieusement ton lien
-            d’édition.
+            Partage créé. Envoie le lien formateur, garde ton lien d’édition.
           </p>
         )}
       </section>
 
+      <CaptureSnippet shareId={shareId} editToken={token} />
       <ExpectedSummary expected={share.expected} />
 
       {latestFeedback && (

@@ -51,7 +51,18 @@ export default function RootLayout({
               </Link>
             </nav>
           </header>
-          <main className="pb-16">{children}</main>
+          <main className="pb-10">{children}</main>
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--line)] py-6 text-sm text-[var(--muted)]">
+            <p>ShareMyReq — V1 formation HTTP</p>
+            <div className="flex gap-4">
+              <Link href="/privacy" className="nav-link">
+                Confidentialité
+              </Link>
+              <Link href="/terms" className="nav-link">
+                CGU
+              </Link>
+            </div>
+          </footer>
         </div>
       </body>
     </html>

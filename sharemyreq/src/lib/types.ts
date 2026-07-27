@@ -50,6 +50,7 @@ export type ExpectedCriteria = {
 export type ShareRecord = {
   id: string;
   editToken: string;
+  trainerToken: string;
   title: string;
   studentLabel: string;
   createdAt: string;
@@ -60,7 +61,7 @@ export type ShareRecord = {
   feedback: FeedbackItem[];
 };
 
-export type PublicShare = Omit<ShareRecord, "editToken">;
+export type PublicShare = Omit<ShareRecord, "editToken" | "trainerToken">;
 
 export type ChecklistItem = {
   id: string;
@@ -74,4 +75,13 @@ export type DiffChange = {
   before: string;
   after: string;
   kind: "added" | "removed" | "changed";
+};
+
+export type ExerciseTemplate = {
+  id: string;
+  label: string;
+  description: string;
+  title: string;
+  expected: ExpectedCriteria;
+  snapshot: RequestSnapshot;
 };

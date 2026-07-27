@@ -11,5 +11,8 @@ Prototype V1 dans `/sharemyreq` — partage de requêtes HTTP pour la formation
 ```bash
 cd sharemyreq
 npm install
+cp .env.example .env.local   # optionnel (Turso en prod)
 npm run dev
 ```
+
+Déploiement : Vercel + Turso (voir `sharemyreq/README.md`).

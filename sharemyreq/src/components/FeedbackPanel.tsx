@@ -6,10 +6,16 @@ import type { FeedbackItem, PublicShare } from "@/lib/types";
 type Props = {
   shareId: string;
   feedback: FeedbackItem[];
+  trainerToken: string;
   onUpdated: (share: PublicShare) => void;
 };
 
-export function FeedbackPanel({ shareId, feedback, onUpdated }: Props) {
+export function FeedbackPanel({
+  shareId,
+  feedback,
+  trainerToken,
+  onUpdated,
+}: Props) {
   const [message, setMessage] = useState("");
   const [authorLabel, setAuthorLabel] = useState("Formateur");
   const [pending, setPending] = useState(false);
@@ -22,7 +28,7 @@ export function FeedbackPanel({ shareId, feedback, onUpdated }: Props) {
       const res = await fetch(`/api/shares/${shareId}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, authorLabel }),
+        body: JSON.stringify({ message, authorLabel, trainerToken }),
       });
       const data = await res.json();
       if (!res.ok) {

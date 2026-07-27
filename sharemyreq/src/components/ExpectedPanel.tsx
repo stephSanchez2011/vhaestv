@@ -18,10 +18,16 @@ const METHODS: Array<HttpMethod | ""> = [
 type Props = {
   shareId: string;
   expected: ExpectedCriteria;
+  trainerToken: string;
   onUpdated: (share: PublicShare) => void;
 };
 
-export function ExpectedPanel({ shareId, expected, onUpdated }: Props) {
+export function ExpectedPanel({
+  shareId,
+  expected,
+  trainerToken,
+  onUpdated,
+}: Props) {
   const [draft, setDraft] = useState<ExpectedCriteria>(
     expected ?? emptyExpected(),
   );
@@ -51,7 +57,7 @@ export function ExpectedPanel({ shareId, expected, onUpdated }: Props) {
       const res = await fetch(`/api/shares/${shareId}/expected`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expected: payload }),
+        body: JSON.stringify({ expected: payload, trainerToken }),
       });
       const data = await res.json();
       if (!res.ok) {

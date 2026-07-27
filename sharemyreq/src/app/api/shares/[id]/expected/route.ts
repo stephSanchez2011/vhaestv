@@ -53,12 +53,19 @@ export async function PUT(request: Request, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
+    const trainerToken = String(body.trainerToken ?? "");
+    if (!trainerToken) {
+      return NextResponse.json(
+        { error: "Token formateur manquant." },
+        { status: 401 },
+      );
+    }
     const expected = parseExpected(body.expected ?? body) || emptyExpected();
-    const share = await updateExpected(id, expected);
+    const share = await updateExpected(id, expected, trainerToken);
     if (!share) {
       return NextResponse.json(
-        { error: "Partage introuvable ou expiré." },
-        { status: 404 },
+        { error: "Accès formateur refusé ou partage introuvable." },
+        { status: 403 },
       );
     }
     return NextResponse.json({ share: toPublicShare(share) });

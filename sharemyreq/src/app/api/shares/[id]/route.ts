@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { addVersion, getShare, toPublicShare } from "@/lib/store";
+import {
+  addVersion,
+  assertEditorAccess,
+  getShare,
+  toPublicShare,
+} from "@/lib/store";
 import type { RequestSnapshot } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -17,7 +22,7 @@ function isSnapshot(value: unknown): value is RequestSnapshot {
   );
 }
 
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
   const { id } = await params;
   const share = await getShare(id);
   if (!share) {
@@ -26,6 +31,19 @@ export async function GET(_request: Request, { params }: Params) {
       { status: 404 },
     );
   }
+
+  const editToken = new URL(request.url).searchParams.get("editToken");
+  if (editToken && assertEditorAccess(share, editToken)) {
+    return NextResponse.json({
+      share: toPublicShare(share),
+      editToken: share.editToken,
+      trainerToken: share.trainerToken,
+      trainerUrl: `/s/${share.id}?t=${share.trainerToken}`,
+      editUrl: `/e/${share.id}?token=${share.editToken}`,
+      captureUrl: `/api/shares/${share.id}/inbox?token=${share.editToken}`,
+    });
+  }
+
   return NextResponse.json({ share: toPublicShare(share) });
 }
 

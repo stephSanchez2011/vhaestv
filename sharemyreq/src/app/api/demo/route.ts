@@ -11,18 +11,20 @@ export const runtime = "nodejs";
 
 export async function POST() {
   try {
-    const { share, editToken } = await createShare({
+    const expected = {
+      method: "POST" as const,
+      urlIncludes: "/api/login",
+      requiredHeaders: ["Content-Type", "Accept"],
+      expectedStatus: 200,
+      requireAuthorization: true,
+      requireJsonBody: true,
+    };
+
+    const { share, editToken, trainerToken } = await createShare({
       title: "POST /api/login — démo formation",
       studentLabel: "Léa (démo)",
       ttlHours: 168,
-      expected: {
-        method: "POST",
-        urlIncludes: "/api/login",
-        requiredHeaders: ["Content-Type", "Accept"],
-        expectedStatus: 200,
-        requireAuthorization: true,
-        requireJsonBody: true,
-      },
+      expected,
       snapshot: {
         method: "POST",
         url: "https://api.example.com/api/login",
@@ -46,11 +48,15 @@ export async function POST() {
       },
     });
 
-    await addFeedback(share.id, {
-      authorLabel: "Formateur",
-      message:
-        "Presque. Il manque Authorization: Bearer … et on vise un 200 une fois le token présent.",
-    });
+    await addFeedback(
+      share.id,
+      {
+        authorLabel: "Formateur",
+        message:
+          "Presque. Il manque Authorization: Bearer … et on vise un 200 une fois le token présent.",
+      },
+      trainerToken,
+    );
 
     const updated = await addVersion(
       share.id,
@@ -80,17 +86,20 @@ export async function POST() {
       { afterFeedback: true },
     );
 
-    // ensure expected stays (createShare already set it; updateExpected noop-safe)
-    const finalShare = updated
-      ? await updateExpected(share.id, share.expected)
-      : share;
+    const finalShare =
+      (updated &&
+        (await updateExpected(share.id, expected, trainerToken))) ||
+      updated ||
+      share;
 
     return NextResponse.json({
       id: share.id,
       editToken,
-      share: toPublicShare(finalShare || share),
-      shareUrl: `/s/${share.id}`,
+      trainerToken,
+      share: toPublicShare(finalShare),
+      shareUrl: `/s/${share.id}?t=${trainerToken}`,
       editUrl: `/e/${share.id}?token=${editToken}`,
+      trainerUrl: `/s/${share.id}?t=${trainerToken}`,
     });
   } catch (error) {
     console.error(error);

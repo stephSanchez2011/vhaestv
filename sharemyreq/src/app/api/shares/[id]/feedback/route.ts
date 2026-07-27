@@ -10,7 +10,14 @@ export async function POST(request: Request, { params }: Params) {
 
   try {
     const body = await request.json();
+    const trainerToken = String(body.trainerToken ?? "");
     const message = String(body.message ?? "").trim();
+    if (!trainerToken) {
+      return NextResponse.json(
+        { error: "Token formateur manquant." },
+        { status: 401 },
+      );
+    }
     if (!message) {
       return NextResponse.json(
         { error: "Le retour formateur est vide." },
@@ -18,15 +25,19 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
-    const share = await addFeedback(id, {
-      message,
-      authorLabel: String(body.authorLabel ?? "Formateur"),
-    });
+    const share = await addFeedback(
+      id,
+      {
+        message,
+        authorLabel: String(body.authorLabel ?? "Formateur"),
+      },
+      trainerToken,
+    );
 
     if (!share) {
       return NextResponse.json(
-        { error: "Partage introuvable ou expiré." },
-        { status: 404 },
+        { error: "Accès formateur refusé ou partage introuvable." },
+        { status: 403 },
       );
     }
 
