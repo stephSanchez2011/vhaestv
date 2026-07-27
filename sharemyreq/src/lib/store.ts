@@ -155,6 +155,9 @@ export async function createShare(input: {
   };
 
   await saveShare(share);
+  await import("./v2-store")
+    .then(({ syncSubmissionFromShare }) => syncSubmissionFromShare(id))
+    .catch(() => undefined);
   return { share, editToken, trainerToken };
 }
 
@@ -187,6 +190,9 @@ export async function addVersion(
   });
   share.updatedAt = now;
   await saveShare(share);
+  await import("./v2-store")
+    .then(({ syncSubmissionFromShare }) => syncSubmissionFromShare(id))
+    .catch(() => undefined);
   return share;
 }
 
@@ -239,6 +245,9 @@ export async function updateExpected(
   };
   share.updatedAt = new Date().toISOString();
   await saveShare(share);
+  await import("./v2-store")
+    .then(({ syncSubmissionFromShare }) => syncSubmissionFromShare(id))
+    .catch(() => undefined);
   return share;
 }
 

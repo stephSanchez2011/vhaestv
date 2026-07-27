@@ -43,6 +43,9 @@ export default function RootLayout({
               Share<span>My</span>Req
             </Link>
             <nav className="flex items-center gap-4">
+              <Link href="/dashboard" className="nav-link">
+                Dashboard
+              </Link>
               <Link href="/demo" className="nav-link">
                 Démo
               </Link>

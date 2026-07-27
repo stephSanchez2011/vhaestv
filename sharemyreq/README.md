@@ -41,6 +41,24 @@ Le schéma SQL exact (tables, clés, indexes, KPI) est documenté ici :
 
 - `docs/v2-progress-schema.md`
 
+### API V2
+
+| Route | Méthode | Rôle |
+|-------|---------|------|
+| `/api/v2/cohorts` | GET/POST | Lister / créer une promo |
+| `/api/v2/cohorts/[id]/students` | POST | Ajouter un élève |
+| `/api/v2/cohorts/[id]/exercises` | POST | Ajouter un exercice |
+| `/api/v2/cohorts/[id]/dashboard` | GET | KPI + tableau promo |
+| `/api/v2/students/[id]/progress` | GET | Fiche progression élève |
+| `/api/v2/submissions/link-share` | POST | Lier un share à élève/exercice |
+| `/api/v2/demo/seed` | POST | Promo démo + rendu lié |
+
+### UI Dashboard
+
+- `/dashboard` — liste promos
+- `/dashboard/[id]` — tableau élèves × exercices
+- `/dashboard/students/[id]` — fiche élève
+
 ## Déploiement Vercel + Turso
 
 1. Crée une DB Turso (`turso db create sharemyreq`)
