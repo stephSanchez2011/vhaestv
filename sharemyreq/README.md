@@ -43,6 +43,20 @@ Sur `/new` et `/e/...`, colle :
 
 → le formulaire se préremplit (méthode, URL, headers, body, et status si HAR).
 
+## Critères attendus
+
+Sur `/s/[id]`, le formateur définit méthode / status / headers requis / auth / JSON.
+La checklist compare **reçu vs attendu**. L’apprenant les voit aussi sur `/e/...`.
+
+## Démo one-click
+
+```bash
+npm run dev
+# puis ouvrir /demo
+```
+
+Crée un scénario v1 (401) → retex → v2 (200 + Bearer).
+
 ## Hors scope V1
 
 - Auth comptes

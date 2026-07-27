@@ -1,10 +1,34 @@
 import type {
   ChecklistItem,
   DiffChange,
+  ExpectedCriteria,
   HeaderMap,
   RequestSnapshot,
   RequestVersion,
 } from "./types";
+
+export function emptyExpected(): ExpectedCriteria {
+  return {
+    method: "",
+    urlIncludes: "",
+    requiredHeaders: [],
+    expectedStatus: null,
+    requireAuthorization: false,
+    requireJsonBody: false,
+  };
+}
+
+export function hasExpectedCriteria(expected?: ExpectedCriteria | null): boolean {
+  if (!expected) return false;
+  return Boolean(
+    expected.method ||
+      expected.urlIncludes.trim() ||
+      expected.requiredHeaders.length > 0 ||
+      expected.expectedStatus != null ||
+      expected.requireAuthorization ||
+      expected.requireJsonBody,
+  );
+}
 
 const SENSITIVE_HEADER_RE =
   /^(authorization|cookie|set-cookie|x-api-key|api-key|proxy-authorization)$/i;
@@ -62,9 +86,13 @@ function getHeader(headers: HeaderMap, name: string): string | undefined {
   return entry?.[1];
 }
 
-export function buildChecklist(snapshot: RequestSnapshot): ChecklistItem[] {
+export function buildChecklist(
+  snapshot: RequestSnapshot,
+  expected?: ExpectedCriteria | null,
+): ChecklistItem[] {
   const items: ChecklistItem[] = [];
   const { method, url, status, requestHeaders, requestBody } = snapshot;
+  const criteria = expected ?? emptyExpected();
 
   try {
     // eslint-disable-next-line no-new
@@ -84,14 +112,47 @@ export function buildChecklist(snapshot: RequestSnapshot): ChecklistItem[] {
     });
   }
 
-  items.push({
-    id: "method",
-    label: "Méthode HTTP",
-    status: "info",
-    detail: method,
-  });
+  if (criteria.method) {
+    items.push({
+      id: "method-expected",
+      label: `Méthode attendue (${criteria.method})`,
+      status: method === criteria.method ? "ok" : "fail",
+      detail:
+        method === criteria.method
+          ? `${method} conforme`
+          : `Reçu ${method}, attendu ${criteria.method}`,
+    });
+  } else {
+    items.push({
+      id: "method",
+      label: "Méthode HTTP",
+      status: "info",
+      detail: method,
+    });
+  }
 
-  if (status == null) {
+  if (criteria.urlIncludes.trim()) {
+    const needle = criteria.urlIncludes.trim();
+    const ok = url.includes(needle);
+    items.push({
+      id: "url-includes",
+      label: "URL contient",
+      status: ok ? "ok" : "fail",
+      detail: ok ? `Contient « ${needle} »` : `Manque « ${needle} » dans ${url}`,
+    });
+  }
+
+  if (criteria.expectedStatus != null) {
+    items.push({
+      id: "status-expected",
+      label: `Status attendu (${criteria.expectedStatus})`,
+      status: status === criteria.expectedStatus ? "ok" : "fail",
+      detail:
+        status === criteria.expectedStatus
+          ? `${status} conforme`
+          : `Reçu ${status ?? "—"}, attendu ${criteria.expectedStatus}`,
+    });
+  } else if (status == null) {
     items.push({
       id: "status",
       label: "Status HTTP",
@@ -122,7 +183,18 @@ export function buildChecklist(snapshot: RequestSnapshot): ChecklistItem[] {
   }
 
   const auth = getHeader(requestHeaders, "Authorization");
-  if (!auth) {
+  if (criteria.requireAuthorization) {
+    items.push({
+      id: "auth-expected",
+      label: "Authorization requis",
+      status: auth ? "ok" : "fail",
+      detail: auth
+        ? /^bearer\s+\S+/i.test(auth)
+          ? "Bearer présent"
+          : "Présent (format non Bearer)"
+        : "Header Authorization manquant",
+    });
+  } else if (!auth) {
     items.push({
       id: "auth",
       label: "Authorization",
@@ -179,7 +251,26 @@ export function buildChecklist(snapshot: RequestSnapshot): ChecklistItem[] {
     });
   }
 
-  if (methodsWithBody.has(method) && requestBody.trim()) {
+  if (criteria.requireJsonBody) {
+    try {
+      JSON.parse(requestBody);
+      items.push({
+        id: "body-json-expected",
+        label: "Body JSON requis",
+        status: "ok",
+        detail: "JSON valide.",
+      });
+    } catch {
+      items.push({
+        id: "body-json-expected",
+        label: "Body JSON requis",
+        status: "fail",
+        detail: requestBody.trim()
+          ? "Body présent mais JSON invalide."
+          : "Body JSON manquant.",
+      });
+    }
+  } else if (methodsWithBody.has(method) && requestBody.trim()) {
     if (contentType && /application\/json/i.test(contentType)) {
       try {
         JSON.parse(requestBody);
@@ -211,6 +302,18 @@ export function buildChecklist(snapshot: RequestSnapshot): ChecklistItem[] {
       label: "Body",
       status: "warn",
       detail: "Body vide pour une méthode qui envoie souvent des données.",
+    });
+  }
+
+  for (const headerName of criteria.requiredHeaders) {
+    const present = hasHeader(requestHeaders, headerName);
+    items.push({
+      id: `required-header-${headerName.toLowerCase()}`,
+      label: `Header requis : ${headerName}`,
+      status: present ? "ok" : "fail",
+      detail: present
+        ? `${headerName}: ${getHeader(requestHeaders, headerName)}`
+        : `${headerName} manquant`,
     });
   }
 

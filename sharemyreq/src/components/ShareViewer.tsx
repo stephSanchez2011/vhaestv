@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Checklist } from "@/components/Checklist";
 import { DiffView } from "@/components/DiffView";
+import { ExpectedPanel } from "@/components/ExpectedPanel";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { RequestView } from "@/components/RequestView";
 import { VersionTimeline } from "@/components/VersionTimeline";
@@ -29,7 +30,7 @@ export function ShareViewer({ initialShare }: { initialShare: PublicShare }) {
     return <p>Version introuvable.</p>;
   }
 
-  const checklist = buildChecklist(current.snapshot);
+  const checklist = buildChecklist(current.snapshot, share.expected);
   const score = checklistScore(checklist);
   const changes = diffVersions(previous, current);
 
@@ -75,6 +76,11 @@ export function ShareViewer({ initialShare }: { initialShare: PublicShare }) {
             versions={share.versions}
             selectedVersion={selectedVersion}
             onSelect={setSelectedVersion}
+          />
+          <ExpectedPanel
+            shareId={share.id}
+            expected={share.expected}
+            onUpdated={setShare}
           />
           <FeedbackPanel
             shareId={share.id}

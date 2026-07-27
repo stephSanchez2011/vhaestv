@@ -21,9 +21,9 @@ export default function HomePage() {
           <Link href="/new" className="btn-primary">
             Créer un partage
           </Link>
-          <a href="#comment-ca-marche" className="btn-secondary">
-            Comment ça marche
-          </a>
+          <Link href="/demo" className="btn-secondary">
+            Voir une démo
+          </Link>
         </div>
       </section>
 

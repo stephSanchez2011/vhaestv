@@ -38,6 +38,15 @@ export type FeedbackItem = {
   targetVersion: number;
 };
 
+export type ExpectedCriteria = {
+  method: HttpMethod | "";
+  urlIncludes: string;
+  requiredHeaders: string[];
+  expectedStatus: number | null;
+  requireAuthorization: boolean;
+  requireJsonBody: boolean;
+};
+
 export type ShareRecord = {
   id: string;
   editToken: string;
@@ -46,6 +55,7 @@ export type ShareRecord = {
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
+  expected: ExpectedCriteria;
   versions: RequestVersion[];
   feedback: FeedbackItem[];
 };

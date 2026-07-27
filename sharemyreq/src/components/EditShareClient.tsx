@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Checklist } from "@/components/Checklist";
+import { ExpectedSummary } from "@/components/ExpectedSummary";
 import { RequestForm } from "@/components/RequestForm";
+import { buildChecklist } from "@/lib/checklist";
 import type { RequestFormValues } from "@/lib/form";
 import { formFromSnapshot, snapshotFromForm } from "@/lib/form";
 import type { PublicShare } from "@/lib/types";
@@ -52,6 +55,11 @@ export function EditShareClient({
   const latestFeedback = useMemo(
     () => [...share.feedback].reverse()[0],
     [share.feedback],
+  );
+
+  const liveChecklist = useMemo(
+    () => buildChecklist(snapshotFromForm(values), share.expected),
+    [values, share.expected],
   );
 
   const shareUrl =
@@ -172,6 +180,8 @@ export function EditShareClient({
         )}
       </section>
 
+      <ExpectedSummary expected={share.expected} />
+
       {latestFeedback && (
         <section className="panel border-[var(--accent)]">
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--accent-ink)]">
@@ -186,6 +196,8 @@ export function EditShareClient({
           </p>
         </section>
       )}
+
+      <Checklist items={liveChecklist} />
 
       <section className="panel">
         <h2 className="section-title mb-4">Mettre à jour la requête</h2>
